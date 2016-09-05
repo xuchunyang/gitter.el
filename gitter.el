@@ -4,6 +4,7 @@
 
 ;; Author: Chunyang Xu <xuchunyang.me@gmail.com>
 ;; URL: https://github.com/xuchunyang/gitter.el
+;; Package-Requires: ((let-alist "1.0.4") (emacs "24.1"))
 ;; Keywords: Gitter, chat, client, Internet
 ;; Version: 0.0
 
@@ -95,16 +96,67 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
         (json-null        nil))
     (json-read)))
 
+(defun gitter--json-read-from-string (string)
+  (let ((json-object-type 'alist)
+        (json-array-type  'list)
+        (json-key-type    'symbol)
+        (json-false       nil)
+        (json-null        nil))
+    (json-read-from-string string)))
+
+(defun gitter--open-room (name id)
+  (with-current-buffer (get-buffer-create (concat "#" name))
+    (unless (get-buffer-process (current-buffer))
+      (let* ((url (format "https://stream.gitter.im/v1/rooms/%s/chatMessages" id))
+             (headers
+              (list "Accept: application/json"
+                    (format "Authorization: Bearer %s" gitter-token)))
+             (proc
+              (apply #'start-process
+                     (concat "curl-streaming-process-" name)
+                     (current-buffer)
+                     gitter-curl-program-name
+                     (gitter--curl-args url "GET" headers))))
+        (set-process-filter proc #'gitter--output-filter)))
+    (switch-to-buffer (current-buffer))))
+
+(defun gitter--output-filter (process output)
+  (when (buffer-live-p (process-buffer process))
+    ;; TODO Try `markdown-mode' since Gitter uses Markdown
+    (with-current-buffer (process-buffer process)
+      (save-excursion
+        (save-restriction
+          (goto-char (point-max))
+          (condition-case err
+              (let-alist (gitter--json-read-from-string output)
+                (insert (format "%s @%s" .fromUser.displayName .fromUser.username)
+                        "\n"
+                        .text
+                        "\n"))
+            (error                      ; Not vaild json
+             ;; Debug
+             (with-current-buffer (get-buffer-create "*Debug Gitter Log")
+               (goto-char (point-max))
+               (insert (format "The error was: %s" err)
+                       "\n"
+                       output)))))))))
+
 (defvar gitter--user-rooms nil)
 
-;; FIXME: Testing
-(defun gitter-list-rooms ()
-  "List rooms the current user is in."
+;;;###autoload
+(defun gitter ()
+  "Open a room."
   (interactive)
-  (setq gitter--user-rooms (gitter--request "GET" "/v1/rooms"))
-  (completing-read "Open room: "
-                   (mapcar (lambda (alist) (cdr (assq 'name alist)))
-                           gitter--user-rooms)))
+  (unless gitter--user-rooms
+    (setq gitter--user-rooms (gitter--request "GET" "/v1/rooms")))
+  ;; FIXME Assuming room name is unique because of `completing-read'
+  (let* ((rooms (mapcar (lambda (alist)
+                          (let-alist alist
+                            (cons .name .id)))
+                        gitter--user-rooms))
+         (name (completing-read "Open room: " rooms))
+         (id (cdr (assoc name rooms))))
+    (gitter--open-room name id)))
 
 (provide 'gitter)
 ;;; gitter.el ends here
