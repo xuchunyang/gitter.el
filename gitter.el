@@ -77,7 +77,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                        (url-hexify-string val)))
              params "&"))
 
-(defun gitter--curl-args (url method &optional headers _data)
+(defun gitter--curl-args (url method &optional headers data)
   (let ((args ()))
     (push "-s" args)
     (push "-i" args)
@@ -86,6 +86,9 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
     (dolist (h headers)
       (push "-H" args)
       (push h args))
+    (when data
+      (push "-d" args)
+      (push data args))
     (nreverse (cons url args))))
 
 (defun gitter--read-response ()
@@ -117,6 +120,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                      (current-buffer)
                      gitter-curl-program-name
                      (gitter--curl-args url "GET" headers))))
+        (process-put proc 'room-id id)
         ;; FIXME: Must parse json incrementally because
         ;; "The output to the filter may come in chunks of any size"
         ;; Take `notmuch-search-process-filter' as an example
@@ -160,6 +164,25 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
          (name (completing-read "Open room: " rooms))
          (id (cdr (assoc name rooms))))
     (gitter--open-room name id)))
+
+;; FIXME Just for testing. It is too bad to use Minibuffer to compose message.
+;;
+;; Maybe try the following layout, assume we are in the room buffer
+;;
+;; ...
+;; Chat history
+;; ...
+;; 
+;; Compose area
+;;
+(defun gitter-send-message ()
+  (interactive)
+  (let ((proc (get-buffer-process (current-buffer))))
+    (when proc
+      (let* ((id (process-get proc 'room-id))
+             (resource (format "/v1/rooms/%s/chatMessages" id)))
+        (gitter--request "POST" resource
+                         nil `((text . ,(read-string "Send message: "))))))))
 
 (provide 'gitter)
 ;;; gitter.el ends here
