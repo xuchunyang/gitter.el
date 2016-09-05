@@ -72,10 +72,12 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
         (display-buffer (current-buffer))))))
 
 (defun gitter--url-encode-params (params)
-  (mapconcat (pcase-lambda (`(,key . ,val))
-               (concat (url-hexify-string (symbol-name key)) "="
-                       (url-hexify-string val)))
-             params "&"))
+  (mapconcat
+   (lambda (pair)
+     (pcase-let ((`(,key . ,val) pair))
+       (concat (url-hexify-string (symbol-name key)) "="
+               (url-hexify-string val))))
+   params "&"))
 
 (defun gitter--curl-args (url method &optional headers data)
   (let ((args ()))
