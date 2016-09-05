@@ -117,6 +117,9 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                      (current-buffer)
                      gitter-curl-program-name
                      (gitter--curl-args url "GET" headers))))
+        ;; FIXME: Must parse json incrementally because
+        ;; "The output to the filter may come in chunks of any size"
+        ;; Take `notmuch-search-process-filter' as an example
         (set-process-filter proc #'gitter--output-filter)))
     (switch-to-buffer (current-buffer))))
 
