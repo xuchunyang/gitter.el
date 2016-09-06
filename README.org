@@ -1,1 +1,4 @@
+* gitter.el
+[[https://gitter.im/M-x-Gitter/Lobby][https://badges.gitter.im/M-x-Gitter/Lobby.svg]]
+
 Work in process
