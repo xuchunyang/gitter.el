@@ -141,6 +141,11 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
     (switch-to-buffer (current-buffer))))
 
 (defun gitter--output-filter (process output)
+  ;; FIXME
+  (with-current-buffer (get-buffer-create "*Log*")
+    (goto-char (point-max))
+    (insert output "\n\n"))
+
   (let ((results-buf (process-buffer process))
         (parse-buf (process-get process 'parse-buf)))
     (when (buffer-live-p results-buf)
@@ -151,6 +156,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
         (condition-case err
             (progn
               (goto-char (point-min))
+              ;; `gitter--read-response' moves point
               (let ((response (gitter--read-response)))
                 (let-alist response
                   (with-current-buffer results-buf
@@ -162,9 +168,9 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                          "\n"
                          .text
                          "\n"))))))
-              ;; Assuming every chunk starts freshly
-              (erase-buffer))
+              (delete-region (point-min) (point)))
           (error
+           ;; FIXME
            (with-current-buffer (get-buffer-create "*Debug Gitter Log")
              (goto-char (point-max))
              (insert (format "The error was: %s" err)
