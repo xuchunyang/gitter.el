@@ -163,7 +163,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                           (let-alist alist
                             (cons .name .id)))
                         gitter--user-rooms))
-         (name (completing-read "Open room: " rooms))
+         (name (completing-read "Open room: " rooms nil t))
          (id (cdr (assoc name rooms))))
     (gitter--open-room name id)))
 
