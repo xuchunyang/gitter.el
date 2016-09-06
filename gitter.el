@@ -51,6 +51,12 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
   :group 'gitter
   :type 'string)
 
+(defvar gitter--debug-p t)
+;; TODO Use only one place for debug
+(defmacro gitter--debug (format-string &rest args)
+  `(when gitter--debug-p
+     (message ,(concat "[Gitter] " format-string) ,@args)))
+
 (defvar gitter--root-endpoint "https://api.gitter.im")
 
 (defun gitter--request (method resource &optional params data _noerror)
@@ -64,6 +70,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                     (list "Accept: application/json"
                           (format "Authorization: Bearer %s" gitter-token))))
            (args (gitter--curl-args url method headers d)))
+      (gitter--debug "Calling curl with %S" args)
       (if (zerop (apply #'call-process gitter-curl-program-name nil t nil args))
           (progn (goto-char (point-min))
                  (gitter--read-response))
