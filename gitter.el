@@ -110,7 +110,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
 
 (defun gitter--open-room (name id)
   (with-current-buffer (get-buffer-create (concat "#" name))
-    (unless (get-buffer-process (current-buffer))
+    (unless (process-live-p (get-buffer-process (current-buffer)))
       (let* ((url (format "https://stream.gitter.im/v1/rooms/%s/chatMessages" id))
              (headers
               (list "Accept: application/json"
@@ -179,7 +179,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
 (defun gitter-send-message ()
   (interactive)
   (let ((proc (get-buffer-process (current-buffer))))
-    (when proc
+    (when (and proc (process-live-p proc))
       (let* ((id (process-get proc 'room-id))
              (resource (format "/v1/rooms/%s/chatMessages" id)))
         (gitter--request "POST" resource
