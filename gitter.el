@@ -123,38 +123,53 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
               (list "Accept: application/json"
                     (format "Authorization: Bearer %s" gitter-token)))
              (proc
+              ;; NOTE According to (info "(elisp) Asynchronous Processes")
+              ;; we should use a pipe by let-binding `process-connection-type'
+              ;; to nil, however, it doesn't working very well on my system
               (apply #'start-process
                      (concat "curl-streaming-process-" name)
                      (current-buffer)
                      gitter-curl-program-name
-                     (gitter--curl-args url "GET" headers))))
+                     (gitter--curl-args url "GET" headers)))
+             ;; Paser response (json) incrementally
+             ;; Use a scratch buffer to accumulate partial output
+             (parse-buf (generate-new-buffer
+                         (concat " *Gitter search parse for " (buffer-name)))))
         (process-put proc 'room-id id)
-        ;; FIXME: Must parse json incrementally because
-        ;; "The output to the filter may come in chunks of any size"
-        ;; Take `notmuch-search-process-filter' as an example
+        (process-put proc 'parse-buf parse-buf)
         (set-process-filter proc #'gitter--output-filter)))
     (switch-to-buffer (current-buffer))))
 
 (defun gitter--output-filter (process output)
-  (when (buffer-live-p (process-buffer process))
-    ;; TODO Try `markdown-mode' since Gitter uses Markdown
-    (with-current-buffer (process-buffer process)
-      (save-excursion
-        (save-restriction
-          (goto-char (point-max))
-          (condition-case err
-              (let-alist (gitter--json-read-from-string output)
-                (insert (format "%s @%s" .fromUser.displayName .fromUser.username)
-                        "\n"
-                        .text
-                        "\n"))
-            (error                      ; Not vaild json
-             ;; Debug
-             (with-current-buffer (get-buffer-create "*Debug Gitter Log")
-               (goto-char (point-max))
-               (insert (format "The error was: %s" err)
-                       "\n"
-                       output)))))))))
+  (let ((results-buf (process-buffer process))
+        (parse-buf (process-get process 'parse-buf)))
+    (when (buffer-live-p results-buf)
+      (with-current-buffer parse-buf
+        ;; Insert new data
+        (goto-char (point-max))
+        (insert output)
+        (condition-case err
+            (progn
+              (goto-char (point-min))
+              (let ((response (gitter--read-response)))
+                (let-alist response
+                  (with-current-buffer results-buf
+                    (save-excursion
+                      (save-restriction
+                        (goto-char (point-max))
+                        (insert
+                         (format "%s @%s" .fromUser.displayName .fromUser.username)
+                         "\n"
+                         .text
+                         "\n"))))))
+              ;; Assuming every chunk starts freshly
+              (erase-buffer))
+          (error
+           (with-current-buffer (get-buffer-create "*Debug Gitter Log")
+             (goto-char (point-max))
+             (insert (format "The error was: %s" err)
+                     "\n"
+                     output))))))))
 
 (defvar gitter--user-rooms nil)
 
