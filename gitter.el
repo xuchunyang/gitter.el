@@ -217,7 +217,8 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                                   .fromUser.username)
                           'face 'font-lock-comment-face)
                          "\n"
-                         (gitter--fontify-markdown (string-trim .text))
+                         (gitter--render-emoji
+                          (gitter--fontify-markdown (string-trim .text)))
                          "\n"
                          "\n"))))))
               (delete-region (point-min) (point)))
@@ -238,6 +239,17 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
       (with-no-warnings
         (font-lock-fontify-buffer)))
     (buffer-string)))
+
+(defun gitter--render-emoji (text)
+  ;; TODO Document it
+  ;; TODO Manybe depends on `emojify.el'?
+  (if (and (display-graphic-p)
+           (require 'emojify nil t))
+      (with-temp-buffer
+        (insert text)
+        (emojify-display-emojis-in-region (point-min) (point-max))
+        (buffer-string))
+    text))
 
 (defvar gitter--user-rooms nil)
 
