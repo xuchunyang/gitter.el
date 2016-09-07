@@ -23,7 +23,13 @@
 
 ;;; Commentary:
 
-;;
+;; TODO Combine multiple messages from the same person (like the web interface)
+;; TODO Markup link
+;; TODO Markup @mention
+;; TODO Markup picture
+;; TODO Markup inline code (by using markdown-mode?)
+;; TODO Markup multiline code (I guesst it is Github Flavored)
+;; TODO Markup emoji
 
 ;;; Code:
 
@@ -207,8 +213,6 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
          (id (cdr (assoc name rooms))))
     (gitter--open-room name id)))
 
-;; TODO Add a place to insert message really
-
 (defun gitter--trim-left (string)
   "Remove leading newline from STRING."
   (if (string-match "\\`\n+" string)
@@ -225,6 +229,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
   "Remove leading and trailing newline from STRING."
   (gitter--trim-left (gitter--trim-right string)))
 
+;; TODO: Setup a gitter major or minor mode for key binding
 (defun gitter-send-message ()
   (interactive)
   (let ((proc (get-buffer-process (current-buffer))))
