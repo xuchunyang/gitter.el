@@ -1,4 +1,44 @@
-* gitter.el
+* Gitter client for Emacs
+
 [[https://gitter.im/M-x-Gitter/Lobby][https://badges.gitter.im/M-x-Gitter/Lobby.svg]]
 
-Work in process
+** Status
+
+Work in process, though it is possible to view real-time messages in rooms and send message.
+
+** Prerequisites
+
+- cURL
+- Emacs 24.1
+- [[http://elpa.gnu.org/packages/let-alist.html][let-alist]] (avaiable from GNU ELPA and built-in since Emacs 25)
+
+** Setup
+
+Add gitter.el to your ~load-path~ and require. Something like:
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'load-path "path/to/gitter.el/")
+(require 'gitter)
+(setq gitter-token "your-token")
+#+END_SRC
+
+Alternatively, if you manage loading packages with use-package:
+
+#+BEGIN_SRC emacs-lisp
+  (use-package gitter
+    :load-path "path/to/gitter.el/"
+    :defer t
+    :commands gitter
+    :init
+    (setq gitter-token "your-token"))
+#+END_SRC
+
+You will need to set the authentication-token. Follow these steps to get your token:
+1) Visit URL `https://developer.gitter.im'
+2) Click Sign in (top right)
+3) You will see your personal access token at
+   URL `https://developer.gitter.im/apps'
+
+** Usage
+
+Type ~M-x gitter~ to join a romm and start chatting.
