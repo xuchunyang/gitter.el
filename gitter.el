@@ -232,13 +232,17 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
 
 (defun gitter--fontify-markdown (text)
   (with-temp-buffer
+    ;; Work-around for `markdown-mode'. It looks like markdown-mode treats ":"
+    ;; specially (I don't know the reason), this strips the specificity (I don't
+    ;; know how either)
+    (insert "\n\n")
     (insert text)
     (delay-mode-hooks (markdown-mode))
     (if (fboundp 'font-lock-ensure)
         (font-lock-ensure)
       (with-no-warnings
         (font-lock-fontify-buffer)))
-    (buffer-string)))
+    (buffer-substring 3 (point-max))))
 
 (defun gitter--render-emoji (text)
   ;; TODO Document it
