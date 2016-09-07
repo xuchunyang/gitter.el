@@ -156,9 +156,14 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                       (save-restriction
                         (goto-char (point-max))
                         (insert
-                         (format "%s @%s" .fromUser.displayName .fromUser.username)
+                         (propertize
+                          (format "──────────[ %s @%s"
+                                  .fromUser.displayName
+                                  .fromUser.username)
+                          'face 'font-lock-comment-face)
                          "\n"
                          .text
+                         "\n"
                          "\n"))))))
               (delete-region (point-min) (point)))
           (error
