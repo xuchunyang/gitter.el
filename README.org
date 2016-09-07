@@ -10,7 +10,6 @@ Work in process, though it is possible to view real-time messages in rooms and s
 
 - cURL
 - Emacs 24.1
-- [[http://elpa.gnu.org/packages/let-alist.html][let-alist]] (avaiable from GNU ELPA and built-in since Emacs 25)
 
 ** Setup
 

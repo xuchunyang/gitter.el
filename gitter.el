@@ -4,7 +4,7 @@
 
 ;; Author: Chunyang Xu <xuchunyang.me@gmail.com>
 ;; URL: https://github.com/xuchunyang/gitter.el
-;; Package-Requires: ((let-alist "1.0.4") (emacs "24.1"))
+;; Package-Requires: ((emacs "24.1") (let-alist "1.0.4") (markdown-mode "2.1"))
 ;; Keywords: Gitter, chat, client, Internet
 ;; Version: 0.0
 
@@ -35,6 +35,7 @@
 ;;; Code:
 
 (require 'json)
+(require 'markdown-mode)
 
 (eval-when-compile (require 'let-alist))
 
@@ -216,7 +217,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                                   .fromUser.username)
                           'face 'font-lock-comment-face)
                          "\n"
-                         .text
+                         (gitter--fontify-markdown (string-trim .text))
                          "\n"
                          "\n"))))))
               (delete-region (point-min) (point)))
@@ -227,6 +228,16 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
              (insert (format "The error was: %s" err)
                      "\n"
                      output))))))))
+
+(defun gitter--fontify-markdown (text)
+  (with-temp-buffer
+    (insert text)
+    (delay-mode-hooks (markdown-mode))
+    (if (fboundp 'font-lock-ensure)
+        (font-lock-ensure)
+      (with-no-warnings
+        (font-lock-fontify-buffer)))
+    (buffer-string)))
 
 (defvar gitter--user-rooms nil)
 
