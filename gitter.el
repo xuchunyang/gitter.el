@@ -36,6 +36,35 @@
 
 (require 'json)
 
+(eval-when-compile (require 'let-alist))
+
+;;; Compatibility
+
+(eval-and-compile
+  (unless (featurep 'subr-x)
+    ;; `subr-x' function for Emacs 24.3 and below
+    (defsubst string-trim-left (string)
+      "Remove leading whitespace from STRING."
+      (if (string-match "\\`[ \t\n\r]+" string)
+          (replace-match "" t t string)
+        string))
+
+    (defsubst string-trim-right (string)
+      "Remove trailing whitespace from STRING."
+      (if (string-match "[ \t\n\r]+\\'" string)
+          (replace-match "" t t string)
+        string))
+
+    (defsubst string-trim (string)
+      "Remove leading and trailing whitespace from STRING."
+      (string-trim-left (string-trim-right string)))
+
+    (defsubst string-empty-p (string)
+      "Check whether STRING is empty."
+      (string= string ""))))
+
+;;; Customization
+
 (defgroup gitter nil
   "An Emacs Gitter client."
   :group 'comm)
@@ -57,6 +86,8 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
   "Name/path by which to invoke the curl program."
   :group 'gitter
   :type 'string)
+
+;;; Main
 
 (defvar gitter--debug-p t)
 ;; TODO Use only one place for debug
@@ -214,22 +245,6 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
          (id (cdr (assoc name rooms))))
     (gitter--open-room name id)))
 
-(defun gitter--trim-left (string)
-  "Remove leading newline from STRING."
-  (if (string-match "\\`\n+" string)
-      (replace-match "" t t string)
-    string))
-
-(defun gitter--trim-right (string)
-  "Remove trailing newline from STRING."
-  (if (string-match "\n+\\'" string)
-      (replace-match "" t t string)
-    string))
-
-(defun gitter--trim (string)
-  "Remove leading and trailing newline from STRING."
-  (gitter--trim-left (gitter--trim-right string)))
-
 ;; TODO: Setup a gitter major or minor mode for key binding
 (defun gitter-send-message ()
   (interactive)
@@ -237,11 +252,11 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
     (when (and proc (process-live-p proc))
       (let* ((id (process-get proc 'room-id))
              (resource (format "/v1/rooms/%s/chatMessages" id))
-             (msg (gitter--trim
+             (msg (string-trim
                    (buffer-substring
                     (marker-position gitter--input-marker)
                     (point-max)))))
-        (if (string= "" msg)
+        (if (string-empty-p msg)
             (error "Can't send empty message")
           (gitter--request "POST" resource
                            nil `((text . ,msg)))
