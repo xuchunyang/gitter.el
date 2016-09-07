@@ -107,9 +107,25 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
         (json-null        nil))
     (json-read)))
 
+(defvar gitter--output-marker nil)
+(make-variable-buffer-local 'gitter--output-marker)
+(defvar gitter--input-marker nil)
+(make-variable-buffer-local 'gitter--input-marker)
+
+(defvar gitter--prompt
+  (concat (propertize "──────────[ Compose Area.  Send M-x gitter-send-message"
+                      'face 'font-lock-comment-face)
+          "\n"))
+
 (defun gitter--open-room (name id)
   (with-current-buffer (get-buffer-create (concat "#" name))
     (unless (process-live-p (get-buffer-process (current-buffer)))
+      ;; Setup markers
+      (unless gitter--output-marker
+        (insert gitter--prompt)
+        (setq gitter--output-marker (point-min-marker))
+        (set-marker-insertion-type gitter--output-marker t)
+        (setq gitter--input-marker (point-max-marker)))
       (let* ((url (format "https://stream.gitter.im/v1/rooms/%s/chatMessages" id))
              (headers
               (list "Accept: application/json"
@@ -154,7 +170,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                   (with-current-buffer results-buf
                     (save-excursion
                       (save-restriction
-                        (goto-char (point-max))
+                        (goto-char (marker-position gitter--output-marker))
                         (insert
                          (propertize
                           (format "──────────[ %s @%s"
@@ -191,24 +207,40 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
          (id (cdr (assoc name rooms))))
     (gitter--open-room name id)))
 
-;; FIXME Just for testing. It is too bad to use Minibuffer to compose message.
-;;
-;; Maybe try the following layout, assume we are in the room buffer
-;;
-;; ...
-;; Chat history
-;; ...
-;; 
-;; Compose area
-;;
+;; TODO Add a place to insert message really
+
+(defun gitter--trim-left (string)
+  "Remove leading newline from STRING."
+  (if (string-match "\\`\n+" string)
+      (replace-match "" t t string)
+    string))
+
+(defun gitter--trim-right (string)
+  "Remove trailing newline from STRING."
+  (if (string-match "\n+\\'" string)
+      (replace-match "" t t string)
+    string))
+
+(defun gitter--trim (string)
+  "Remove leading and trailing newline from STRING."
+  (gitter--trim-left (gitter--trim-right string)))
+
 (defun gitter-send-message ()
   (interactive)
   (let ((proc (get-buffer-process (current-buffer))))
     (when (and proc (process-live-p proc))
       (let* ((id (process-get proc 'room-id))
-             (resource (format "/v1/rooms/%s/chatMessages" id)))
-        (gitter--request "POST" resource
-                         nil `((text . ,(read-string "Send message: "))))))))
+             (resource (format "/v1/rooms/%s/chatMessages" id))
+             (msg (gitter--trim
+                   (buffer-substring
+                    (marker-position gitter--input-marker)
+                    (point-max)))))
+        (if (string= "" msg)
+            (error "Can't send empty message")
+          (gitter--request "POST" resource
+                           nil `((text . ,msg)))
+          (delete-region (marker-position gitter--input-marker)
+                         (point-max)))))))
 
 (provide 'gitter)
 ;;; gitter.el ends here
