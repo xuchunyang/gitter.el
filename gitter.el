@@ -24,8 +24,7 @@
 ;;; Commentary:
 
 ;; TODO Fill
-;; TODO Combine multiple messages from the same person (like the web interface)
-;; TODO Make message read-only
+;; TODO Make message read-onl?
 ;; TODO Markup plain like http://freefoodcamp.com
 ;; TODO Markup link like [Bulma](http://bulma.io/)
 ;; TODO Markup @mention
@@ -47,8 +46,18 @@
 ;;; Compatibility
 
 (eval-and-compile
+  ;; Added in Emacs 24.3
+  (defmacro defvar-local (var val &optional docstring)
+    "Define VAR as a buffer-local variable with default value VAL.
+Like `defvar' but additionally marks the variable as being automatically
+buffer-local wherever it is set."
+    (declare (debug defvar) (doc-string 3))
+    ;; Can't use backquote here, it's too early in the bootstrap.
+    (list 'progn (list 'defvar var val docstring)
+          (list 'make-variable-buffer-local (list 'quote var))))
+
+  ;; Add in Emacs 24.4
   (unless (featurep 'subr-x)
-    ;; `subr-x' function for Emacs 24.3 and below
     (defsubst string-trim-left (string)
       "Remove leading whitespace from STRING."
       (if (string-match "\\`[ \t\n\r]+" string)
@@ -151,10 +160,14 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
         (json-null        nil))
     (json-read)))
 
-(defvar gitter--output-marker nil)
-(make-variable-buffer-local 'gitter--output-marker)
-(defvar gitter--input-marker nil)
-(make-variable-buffer-local 'gitter--input-marker)
+(defvar-local gitter--output-marker nil
+  "The marker where process output (i.e., message) should be insert.")
+
+(defvar-local gitter--input-marker nil
+  "The markder where input (i.e., composing a new message) begins.")
+
+(defvar-local gitter--last-message nil
+  "The last message has been inserted.")
 
 (defvar gitter--prompt
   (concat (propertize "──────────[ Compose Area.  Send M-x gitter-send-message"
@@ -209,24 +222,34 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
             (progn
               (goto-char (point-min))
               ;; `gitter--read-response' moves point
-              (let ((response (gitter--read-response)))
+              (let* ((response (gitter--read-response)))
                 (let-alist response
                   (with-current-buffer results-buf
                     (save-excursion
                       (save-restriction
                         (goto-char (marker-position gitter--output-marker))
+                        (if (and gitter--last-message
+                                 (string= .fromUser.username
+                                          (let-alist gitter--last-message
+                                            .fromUser.username)))
+                            ;; Delete one newline
+                            (delete-char -1)
+                          (insert
+                           (propertize
+                            ;; FIXME Don't use multiline prompt?
+                            (format "──────────[ %s @%s"
+                                    .fromUser.displayName
+                                    .fromUser.username)
+                            'face 'font-lock-comment-face)
+                           "\n"))
                         (insert
-                         (propertize
-                          ;; FIXME Don't use multiline prompt
-                          (format "──────────[ %s @%s"
-                                  .fromUser.displayName
-                                  .fromUser.username)
-                          'face 'font-lock-comment-face)
-                         "\n"
                          (gitter--render-emoji
-                          (gitter--fontify-markdown (string-trim .text)))
+                          (gitter--fontify-markdown
+                           ;; TODO Delete trailing spaces on every line as well
+                           (string-trim .text)))
                          "\n"
-                         "\n"))))))
+                         "\n")
+                        (setq gitter--last-message response))))))
               (delete-region (point-min) (point)))
           (error
            ;; FIXME
