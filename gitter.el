@@ -23,14 +23,17 @@
 
 ;;; Commentary:
 
+;; TODO Fill
 ;; TODO Combine multiple messages from the same person (like the web interface)
-;; TODO Markup link
+;; TODO Markup plain like http://freefoodcamp.com
+;; TODO Markup link like [Bulma](http://bulma.io/)
 ;; TODO Markup @mention
-;; TODO Markup picture
+;; TODO Markup link to picture like
+;; ![](https://cdn01.gitter.im/_s/S8d79c25/images/emoji/chicken.png)
+;; [![blob](https://files.gitter.im/FreeCodeCamp/chinese/2otH/thumb/blob.png)](https://files.gitter.im/FreeCodeCamp/chinese/2otH/blob)
 ;; TODO Markup inline code (by using markdown-mode?)
 ;; TODO Markup multiline code (I guesst it is Github Flavored)
 ;; TODO Markup emoji
-;; TODO Fill
 
 ;;; Code:
 
@@ -245,14 +248,30 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
     (buffer-substring 3 (point-max))))
 
 (defun gitter--render-emoji (text)
-  ;; TODO Document it
-  ;; TODO Manybe depends on `emojify.el'?
-  (if (and (display-graphic-p)
-           (require 'emojify nil t))
-      (with-temp-buffer
-        (insert text)
-        (emojify-display-emojis-in-region (point-min) (point-max))
-        (buffer-string))
+  (if (display-graphic-p)
+      (cond ((require 'emojify nil t)
+             (with-temp-buffer
+               (insert text)
+               (emojify-display-emojis-in-region (point-min) (point-max))
+               (buffer-string)))
+            ((require 'emoji-cheat-sheet-plus nil t)
+             (with-temp-buffer
+               (insert text)
+               (emoji-cheat-sheet-plus--create-cache)
+               (emoji-cheat-sheet-plus--display-region (point-min) (point-max))
+               (buffer-string)))
+            ((require 'company-emoji nil t)
+             (with-temp-buffer
+               (insert text)
+               (goto-char (point-min))
+               (let (emoji-list emoji)
+                 (while (re-search-forward ":[^:]+:" nil t)
+                   (unless emoji-list
+                     (setq emoji-list (company-emoji--create-list)))
+                   (setq emoji (car (member (match-string 0) emoji-list)))
+                   (when emoji
+                     (replace-match (get-text-property 0 :unicode emoji) t t))))
+               (buffer-string))))
     text))
 
 (defvar gitter--user-rooms nil)
