@@ -25,15 +25,17 @@
 
 ;; TODO Fill
 ;; TODO Combine multiple messages from the same person (like the web interface)
+;; TODO Make message read-only
 ;; TODO Markup plain like http://freefoodcamp.com
 ;; TODO Markup link like [Bulma](http://bulma.io/)
 ;; TODO Markup @mention
 ;; TODO Markup link to picture like
 ;; ![](https://cdn01.gitter.im/_s/S8d79c25/images/emoji/chicken.png)
 ;; [![blob](https://files.gitter.im/FreeCodeCamp/chinese/2otH/thumb/blob.png)](https://files.gitter.im/FreeCodeCamp/chinese/2otH/blob)
-;; TODO Markup inline code (by using markdown-mode?)
-;; TODO Markup multiline code (I guesst it is Github Flavored)
-;; TODO Markup emoji
+;; TODO Markup multiline code (I guesst it is Github Flavored. Gitter and maybe
+;; discourse can highlight code block without a language tag, I don't know this
+;; can be done in Emacs)
+;; TODO @mention completion
 
 ;;; Code:
 
@@ -215,6 +217,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
                         (goto-char (marker-position gitter--output-marker))
                         (insert
                          (propertize
+                          ;; FIXME Don't use multiline prompt
                           (format "──────────[ %s @%s"
                                   .fromUser.displayName
                                   .fromUser.username)
