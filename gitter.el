@@ -94,7 +94,7 @@
 ;; 3 Usage
 ;; =======
 
-;;   Type `M-x gitter' to join a romm and start chatting.
+;;   Type `M-x gitter' to join a room and start chatting.
 
 
 ;; 4 Customization
@@ -104,7 +104,7 @@
 ;; ~~~~~~~~~
 
 ;;   If you want to display Emoji, install [emojify] *or*
-;;   [emoji-cheat-sheet-plus] *or* [company-emoji], they are all avaiable
+;;   [emoji-cheat-sheet-plus] *or* [company-emoji], they are all available
 ;;   from MELPA. You only need to install one of them, but if you install
 ;;   more than one of them, the priority is emojify >
 ;;   emoji-cheat-sheet-plus > company-emoji.
@@ -124,7 +124,7 @@
 ;;   If you are a serious Gitter user (I am not) and you compare this
 ;;   little program with other official Gitter clients, I guess you will
 ;;   probably be very disappointed: lack of functions and features, buggy
-;;   etc, so now you have been warnned. However, feedback, suggestion and
+;;   etc, so now you have been warned. However, feedback, suggestion and
 ;;   patch are always welcome.
 
 ;;   By the way, Gitter provides [IRC access] and there are several
