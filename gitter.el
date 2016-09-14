@@ -4,7 +4,7 @@
 
 ;; Author: Chunyang Xu <xuchunyang.me@gmail.com>
 ;; URL: https://github.com/xuchunyang/gitter.el
-;; Package-Requires: ((emacs "24.1") (let-alist "1.0.4") (markdown-mode "2.1"))
+;; Package-Requires: ((emacs "24.1") (let-alist "1.0.4"))
 ;; Keywords: Gitter, chat, client, Internet
 ;; Version: 0.0
 
@@ -28,7 +28,6 @@
 ;;; Code:
 
 (require 'json)
-(require 'markdown-mode)
 
 (eval-when-compile (require 'let-alist))
 
