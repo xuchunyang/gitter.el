@@ -250,10 +250,11 @@ URL `https://developer.gitter.im/docs/streaming-api'.")
 (defvar-local gitter--last-message nil
   "The last message has been inserted.")
 
-(defvar gitter--prompt
+(defvar gitter--input-prompt
   (concat (propertize "──────────[ Compose Area.  Send M-x gitter-send-message"
                       'face 'font-lock-comment-face)
-          "\n"))
+          "\n")
+  "You should compose your message after this prompt.")
 
 (defvar gitter--user-rooms nil
   "JSON object of requesing user rooms API.")
@@ -331,7 +332,7 @@ PARAMS is an alist."
     (unless (process-live-p (get-buffer-process (current-buffer)))
       ;; Setup markers
       (unless gitter--output-marker
-        (insert gitter--prompt)
+        (insert gitter--input-prompt)
         (setq gitter--output-marker (point-min-marker))
         (set-marker-insertion-type gitter--output-marker t)
         (setq gitter--input-marker (point-max-marker)))
