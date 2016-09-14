@@ -252,13 +252,13 @@ URL `https://developer.gitter.im/docs/streaming-api'.")
   "The last message has been inserted.")
 
 (defvar gitter--input-prompt
-  (concat (propertize "──────────[ Compose Area.  Send M-x gitter-send-message"
+  (concat (propertize "──────────[ Compose after this line.  Send C-c C-c"
                       'face 'font-lock-comment-face)
           "\n")
   "The prompt that you will compose your message after.")
 
 (defvar gitter--prompt-function #'gitter--default-prompt
-  "The function which returns a prompt for chatting logs.")
+  "function called with message JSON object to return a prompt for chatting logs.")
 
 (defvar gitter--user-rooms nil
   "JSON object of requesing user rooms API.")
@@ -334,6 +334,7 @@ PARAMS is an alist."
 (defun gitter--open-room (name id)
   (with-current-buffer (get-buffer-create (concat "#" name))
     (unless (process-live-p (get-buffer-process (current-buffer)))
+      (gitter-minor-mode 1)
       ;; Setup markers
       (unless gitter--output-marker
         (insert gitter--input-prompt)
@@ -460,6 +461,33 @@ PARAMS is an alist."
                  (replace-match (get-text-property 0 :unicode emoji) t t))))
            (buffer-string)))
         (t text)))
+
+
+;;; Minor mode
+
+(defvar gitter-minor-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-c" #'gitter-send-message)
+    map)
+  "Keymap for `gitter-minor-mode'.")
+
+;; FIXME Maybe it is better to use a major mode
+(define-minor-mode gitter-minor-mode
+  "Minor mode which is enabled automatically in Gitter buffers.
+With a prefix argument ARG, enable the mode if ARG is positive,
+and disable it otherwise.  If called from Lisp, enable the mode
+if ARG is omitted or nil.
+
+Ustually you don't need to call it interactively, it is
+interactive because of the cost of using `define-minor-mode'.
+Sorry to make your M-x more chaotic (yes, I think M-x is already
+chaotic), that's not my intention but I don't want to bother with
+learning how to make commandsnon-interactive."
+  :init-value nil
+  :lighter " Gitter"
+  :keymap gitter-minor-mode-map
+  :global nil
+  :group 'gitter)
 
 
 ;;; Commands
