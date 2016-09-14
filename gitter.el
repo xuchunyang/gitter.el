@@ -507,7 +507,6 @@ learning how to make commandsnon-interactive."
          (id (cdr (assoc name rooms))))
     (gitter--open-room name id)))
 
-;; TODO: Setup a gitter major or minor mode for key binding
 (defun gitter-send-message ()
   (interactive)
   (let ((proc (get-buffer-process (current-buffer))))
