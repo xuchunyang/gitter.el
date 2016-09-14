@@ -104,8 +104,17 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC."
 (defvar gitter--debug-p nil
   "When non-nil, print debug information.")
 
-(defvar gitter--root-endpoint "https://api.gitter.im"
-  "The Gitter API root.")
+(defconst gitter--root-endpoint "https://api.gitter.im"
+  "The Gitter API endpoint.
+
+For its documentation, refer to
+URL `https://developer.gitter.im/docs/welcome'.")
+
+(defconst gitter--stream-endpoint "https://stream.gitter.im"
+  "The Gitter Streaming API endpoint.
+
+For its documentation, refer to
+URL `https://developer.gitter.im/docs/streaming-api'.")
 
 (defvar-local gitter--output-marker nil
   "The marker where process output (i.e., message) should be insert.")
@@ -194,7 +203,8 @@ PARAMS is an alist."
         (setq gitter--output-marker (point-min-marker))
         (set-marker-insertion-type gitter--output-marker t)
         (setq gitter--input-marker (point-max-marker)))
-      (let* ((url (format "https://stream.gitter.im/v1/rooms/%s/chatMessages" id))
+      (let* ((url (concat gitter--stream-endpoint
+                          (format "/v1/rooms/%s/chatMessages" id)))
              (headers
               (list "Accept: application/json"
                     (format "Authorization: Bearer %s" gitter-token)))
