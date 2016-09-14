@@ -133,6 +133,13 @@ URL `https://developer.gitter.im/docs/streaming-api'.")
 (defvar gitter--user-rooms nil
   "JSON object of requesing user rooms API.")
 
+(defvar gitter--markup-text-functions '(string-trim
+                                        gitter--markup-emoji)
+  "A list of functions to markup text. They will be called in order.
+
+The function takes a string as argument and returns a string.
+The function should not modify the current buffer.")
+
 
 ;;; Utility
 
@@ -264,10 +271,10 @@ PARAMS is an alist."
                             'face 'font-lock-comment-face)
                            "\n"))
                         (insert
-                         (gitter--render-emoji
-                          (gitter--fontify-markdown
-                           ;; TODO Delete trailing spaces on every line as well
-                           (string-trim .text)))
+                         (let ((text .text))
+                           (dolist (fn gitter--markup-text-functions)
+                             (setq text (funcall fn text)))
+                           text)
                          "\n"
                          "\n")
                         (setq gitter--last-message response))))))
@@ -280,21 +287,23 @@ PARAMS is an alist."
                      "\n"
                      output))))))))
 
-(defun gitter--fontify-markdown (text)
-  (with-temp-buffer
-    ;; Work-around for `markdown-mode'. It looks like markdown-mode treats ":"
-    ;; specially (I don't know the reason), this strips the specificity (I don't
-    ;; know how either)
-    (insert "\n\n")
-    (insert text)
-    (delay-mode-hooks (markdown-mode))
-    (if (fboundp 'font-lock-ensure)
-        (font-lock-ensure)
-      (with-no-warnings
-        (font-lock-fontify-buffer)))
-    (buffer-substring 3 (point-max))))
+;; The result produced by `markdown-mode' was not satisfying
+;;
+;; (defun gitter--fontify-markdown (text)
+;;   (with-temp-buffer
+;;     ;; Work-around for `markdown-mode'. It looks like markdown-mode treats ":"
+;;     ;; specially (I don't know the reason), this strips the specificity (I don't
+;;     ;; know how either)
+;;     (insert "\n\n")
+;;     (insert text)
+;;     (delay-mode-hooks (markdown-mode))
+;;     (if (fboundp 'font-lock-ensure)
+;;         (font-lock-ensure)
+;;       (with-no-warnings
+;;         (font-lock-fontify-buffer)))
+;;     (buffer-substring 3 (point-max))))
 
-(defun gitter--render-emoji (text)
+(defun gitter--markup-emoji (text)
   (cond ((require 'emojify nil t)
          (with-temp-buffer
            (insert text)
