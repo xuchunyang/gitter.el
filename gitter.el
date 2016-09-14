@@ -23,18 +23,7 @@
 
 ;;; Commentary:
 
-;; TODO Fill
-;; TODO Make message read-onl?
-;; TODO Markup plain like http://freefoodcamp.com
-;; TODO Markup link like [Bulma](http://bulma.io/)
-;; TODO Markup @mention
-;; TODO Markup link to picture like
-;; ![](https://cdn01.gitter.im/_s/S8d79c25/images/emoji/chicken.png)
-;; [![blob](https://files.gitter.im/FreeCodeCamp/chinese/2otH/thumb/blob.png)](https://files.gitter.im/FreeCodeCamp/chinese/2otH/blob)
-;; TODO Markup multiline code (I guesst it is Github Flavored. Gitter and maybe
-;; discourse can highlight code block without a language tag, I don't know this
-;; can be done in Emacs)
-;; TODO @mention completion
+;;
 
 ;;; Code:
 
@@ -43,6 +32,7 @@
 
 (eval-when-compile (require 'let-alist))
 
+
 ;;; Compatibility
 
 (eval-and-compile
@@ -78,6 +68,7 @@ buffer-local wherever it is set."
       "Check whether STRING is empty."
       (string= string ""))))
 
+
 ;;; Customization
 
 (defgroup gitter nil
@@ -102,18 +93,43 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
   :group 'gitter
   :type 'string)
 
-;;; Main
+
+;;; Variable
 
-(defvar gitter--debug-p t)
-;; TODO Use only one place for debug
+(defvar gitter--debug-p nil
+  "When non-nil, print debug information.")
+
+(defvar gitter--root-endpoint "https://api.gitter.im"
+  "The Gitter API root.")
+
+(defvar-local gitter--output-marker nil
+  "The marker where process output (i.e., message) should be insert.")
+
+(defvar-local gitter--input-marker nil
+  "The markder where input (i.e., composing a new message) begins.")
+
+(defvar-local gitter--last-message nil
+  "The last message has been inserted.")
+
+(defvar gitter--prompt
+  (concat (propertize "──────────[ Compose Area.  Send M-x gitter-send-message"
+                      'face 'font-lock-comment-face)
+          "\n"))
+
+(defvar gitter--user-rooms nil
+  "JSON object of requesing user rooms API.")
+
+
+;;; Utility
+
 (defmacro gitter--debug (format-string &rest args)
+  "When `gitter--debug-p', print debug information almost like `message'."
   `(when gitter--debug-p
      (message ,(concat "[Gitter] " format-string) ,@args)))
 
-(defvar gitter--root-endpoint "https://api.gitter.im")
-
 (defun gitter--request (method resource &optional params data _noerror)
-  ;; PARAMS and DATA should be nil or alist
+  "Request URL at RESOURCE with METHOD.
+If PARAMS or DATA is provided, it should be alist."
   (with-current-buffer (generate-new-buffer " *curl*")
     (let* ((p (and params (concat "?" (gitter--url-encode-params params))))
            (d (and data (json-encode-list data)))
@@ -131,6 +147,8 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
         (display-buffer (current-buffer))))))
 
 (defun gitter--url-encode-params (params)
+  "URI-encode and concatenate PARAMS.
+PARAMS is an alist."
   (mapconcat
    (lambda (pair)
      (pcase-let ((`(,key . ,val) pair))
@@ -139,6 +157,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
    params "&"))
 
 (defun gitter--curl-args (url method &optional headers data)
+  "Return curl command line options/arguments as a list."
   (let ((args ()))
     (push "-s" args)
     ;; (push "-i" args)
@@ -153,26 +172,13 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
     (nreverse (cons url args))))
 
 (defun gitter--read-response ()
+  "Customized `json-read' by using native Emacs Lisp types."
   (let ((json-object-type 'alist)
         (json-array-type  'list)
         (json-key-type    'symbol)
         (json-false       nil)
         (json-null        nil))
     (json-read)))
-
-(defvar-local gitter--output-marker nil
-  "The marker where process output (i.e., message) should be insert.")
-
-(defvar-local gitter--input-marker nil
-  "The markder where input (i.e., composing a new message) begins.")
-
-(defvar-local gitter--last-message nil
-  "The last message has been inserted.")
-
-(defvar gitter--prompt
-  (concat (propertize "──────────[ Compose Area.  Send M-x gitter-send-message"
-                      'face 'font-lock-comment-face)
-          "\n"))
 
 (defun gitter--open-room (name id)
   (with-current-buffer (get-buffer-create (concat "#" name))
@@ -206,10 +212,10 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
     (switch-to-buffer (current-buffer))))
 
 (defun gitter--output-filter (process output)
-  ;; FIXME
-  (with-current-buffer (get-buffer-create "*Log*")
-    (goto-char (point-max))
-    (insert output "\n\n"))
+  (when gitter--debug-p
+    (with-current-buffer (get-buffer-create "*gitter log*")
+      (goto-char (point-max))
+      (insert output "\n\n")))
 
   (let ((results-buf (process-buffer process))
         (parse-buf (process-get process 'parse-buf)))
@@ -299,7 +305,8 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
            (buffer-string)))
         (t text)))
 
-(defvar gitter--user-rooms nil)
+
+;;; Commands
 
 ;;;###autoload
 (defun gitter ()
