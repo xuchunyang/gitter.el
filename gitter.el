@@ -163,17 +163,18 @@
 
 (eval-and-compile
   ;; Added in Emacs 24.3
-  (defmacro defvar-local (var val &optional docstring)
-    "Define VAR as a buffer-local variable with default value VAL.
+  (unless (fboundp 'defvar-local)
+    (defmacro defvar-local (var val &optional docstring)
+      "Define VAR as a buffer-local variable with default value VAL.
 Like `defvar' but additionally marks the variable as being automatically
 buffer-local wherever it is set."
-    (declare (debug defvar) (doc-string 3))
-    ;; Can't use backquote here, it's too early in the bootstrap.
-    (list 'progn (list 'defvar var val docstring)
-          (list 'make-variable-buffer-local (list 'quote var))))
+      (declare (debug defvar) (doc-string 3))
+      ;; Can't use backquote here, it's too early in the bootstrap.
+      (list 'progn (list 'defvar var val docstring)
+            (list 'make-variable-buffer-local (list 'quote var)))))
 
   ;; Add in Emacs 24.4
-  (unless (featurep 'subr-x)
+  (unless (require 'subr-x nil 'no-error)
     (defsubst string-trim-left (string)
       "Remove leading whitespace from STRING."
       (if (string-match "\\`[ \t\n\r]+" string)
