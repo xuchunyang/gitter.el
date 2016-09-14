@@ -254,7 +254,10 @@ URL `https://developer.gitter.im/docs/streaming-api'.")
   (concat (propertize "──────────[ Compose Area.  Send M-x gitter-send-message"
                       'face 'font-lock-comment-face)
           "\n")
-  "You should compose your message after this prompt.")
+  "The prompt that you will compose your message after.")
+
+(defvar gitter--prompt-function #'gitter--default-prompt
+  "The function which returns a prompt for chatting logs.")
 
 (defvar gitter--user-rooms nil
   "JSON object of requesing user rooms API.")
@@ -388,14 +391,7 @@ PARAMS is an alist."
                                             .fromUser.username)))
                             ;; Delete one newline
                             (delete-char -1)
-                          (insert
-                           (propertize
-                            ;; FIXME Don't use multiline prompt?
-                            (format "──────────[ %s @%s"
-                                    .fromUser.displayName
-                                    .fromUser.username)
-                            'face 'font-lock-comment-face)
-                           "\n"))
+                          (insert (funcall gitter--prompt-function response)))
                         (insert
                          (let ((text .text))
                            (dolist (fn gitter--markup-text-functions)
@@ -412,6 +408,15 @@ PARAMS is an alist."
              (insert (format "The error was: %s" err)
                      "\n"
                      output))))))))
+
+(defun gitter--default-prompt (response)
+  "Default function to make prompt by using the JSON object MESSAGE."
+  (let-alist response
+    (concat (propertize (format "──────────[ %s @%s"
+                                .fromUser.displayName
+                                .fromUser.username)
+                        'face 'font-lock-comment-face)
+            "\n")))
 
 ;; The result produced by `markdown-mode' was not satisfying
 ;;
