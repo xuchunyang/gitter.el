@@ -142,6 +142,7 @@
 ;;     - Markdown link
 ;;     - Github-flavored Markdown image
 ;;     - @mention
+;;     - Github #issue
 ;;     - Markdown inline code block (add syntax highlighting if it is
 ;;       possible and very easy)
 ;;     - Github-flavored fenced code block (add syntax highlighting if it
