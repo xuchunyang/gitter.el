@@ -75,9 +75,11 @@ buffer-local wherever it is set."
   "An Emacs Gitter client."
   :group 'comm)
 
-;; FIXME: Use `defcustom' instead
-(defvar gitter-token nil
+(defcustom gitter-token nil
   "Your Gitter Personal Access Token.
+
+If it is nil, when you M-x gitter, you will be asked to enter
+your token in the minibuffer.
 
 To get your token:
 1) Visit URL `https://developer.gitter.im'
@@ -86,7 +88,10 @@ To get your token:
    URL `https://developer.gitter.im/apps'
 
 DISCLAIMER
-When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.")
+When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC."
+  :group 'gitter
+  :type '(choice (string :tag "Token")
+                 (const :tag "Not set" nil)))
 
 (defcustom gitter-curl-program-name "curl"
   "Name/path by which to invoke the curl program."
