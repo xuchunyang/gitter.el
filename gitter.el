@@ -155,8 +155,15 @@
 ;;; Code:
 
 (require 'json)
+(require 'subr-x nil 'no-error)
 
 (eval-when-compile (require 'let-alist))
+
+;; Tell the byte compiler about autoloaded functions from packages
+(declare-function emojify-display-emojis-in-region "emojify" (beg end))
+(declare-function emoji-cheat-sheet-plus--create-cache "emoji-cheat-sheet-plus" ())
+(declare-function emoji-cheat-sheet-plus--display-region "emoji-cheat-sheet-plus" (beg end))
+(declare-function company-emoji--create-list "company-emoji" ())
 
 
 ;;; Compatibility
@@ -174,7 +181,7 @@ buffer-local wherever it is set."
             (list 'make-variable-buffer-local (list 'quote var)))))
 
   ;; Add in Emacs 24.4
-  (unless (require 'subr-x nil 'no-error)
+  (unless (featurep 'subr-x)
     (defsubst string-trim-left (string)
       "Remove leading whitespace from STRING."
       (if (string-match "\\`[ \t\n\r]+" string)
