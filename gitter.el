@@ -205,9 +205,6 @@ buffer-local wherever it is set."
 (defcustom gitter-token nil
   "Your Gitter Personal Access Token.
 
-If it is nil, when you M-x gitter, you will be asked to enter
-your token in the minibuffer.
-
 To get your token:
 1) Visit URL `https://developer.gitter.im'
 2) Click Sign in (top right)
@@ -497,6 +494,8 @@ learning how to make commandsnon-interactive."
 (defun gitter ()
   "Open a room."
   (interactive)
+  (unless (stringp gitter-token)
+    (error "`gitter-token' is not set. Please set it then try again"))
   (unless gitter--user-rooms
     (setq gitter--user-rooms (gitter--request "GET" "/v1/rooms")))
   ;; FIXME Assuming room name is unique because of `completing-read'
