@@ -1,16 +1,27 @@
 #+TITLE: gitter.el
 #+AUTHOR: Chunyang Xu
 
+[[https://melpa.org/#/gitter][https://melpa.org/packages/gitter-badge.svg]]
+[[https://travis-ci.org/xuchunyang/gitter.el][https://travis-ci.org/xuchunyang/gitter.el.svg?branch=master]]
 [[https://gitter.im/M-x-Gitter/Lobby][https://badges.gitter.im/M-x-Gitter/Lobby.svg]]
 
-A rough [[https://gitter.zendesk.com/hc/en-us/articles/200178981-What-s-Gitter-written-in-][Gitter]] client for [[https://www.gnu.org/software/emacs/][GNU Emacs]].
+A [[https://gitter.im/][Gitter]] client for [[https://www.gnu.org/software/emacs/][GNU Emacs]].
 
 * Prerequisites
 
 - cURL
 - Emacs 24.1 or newer
 
-* Setup
+* Install
+
+** Melpa
+
+~gitter.el~ is available from
+Melpa. After[[https://melpa.org/#/getting-started][setting up]] Melpa
+as a repository and update the local package list, you can install
+~gitter.el~ and its dependencies using ~M-x package-install gitter~.
+
+** Manually
 
 Add gitter.el to your ~load-path~ and require. Something like:
 
@@ -19,17 +30,12 @@ Add gitter.el to your ~load-path~ and require. Something like:
   (require 'gitter)
 #+END_SRC
 
-Alternatively, if you manage loading packages with use-package:
+If you want to avoid loading ~gitter.el~ at Emacs startup, autoload
+the ~gitter~ command instead of requiring.
 
-#+BEGIN_SRC emacs-lisp
-  (use-package gitter
-    :load-path "path/to/gitter.el/"
-    :defer t
-    :commands gitter)
-#+END_SRC
+* Setup
 
-Then you will need to set the authentication-token. Follow these steps
-to get your token:
+You need to set ~gitter-token~ to the authentication-token. Follow these steps to get your token:
 1) Visit URL `https://developer.gitter.im'
 2) Click Sign in (top right)
 3) You will see your personal access token at

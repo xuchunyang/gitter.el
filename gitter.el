@@ -35,24 +35,34 @@
 ;; _________________
 
 ;; 1 Prerequisites
-;; 2 Setup
-;; 3 Usage
-;; 4 Customization
-;; .. 4.1 Emoji
-;; 5 Limitation
-;; 6 To do
+;; 2 Install
+;; .. 2.1 Melpa
+;; .. 2.2 Manually
+;; 3 Setup
+;; 4 Usage
+;; 5 Customization
+;; .. 5.1 Emoji
+;; 6 Limitation
+;; 7 To do
 
 
+;; [[https://melpa.org/packages/gitter-badge.svg]]
+;; [[https://travis-ci.org/xuchunyang/gitter.el.svg?branch=master]]
 ;; [[https://badges.gitter.im/M-x-Gitter/Lobby.svg]]
 
-;; A rough [Gitter] client for [GNU Emacs].
+;; A [Gitter] client for [GNU Emacs].
 
+
+;; [[https://melpa.org/packages/gitter-badge.svg]]
+;; https://melpa.org/#/gitter
+
+;; [[https://travis-ci.org/xuchunyang/gitter.el.svg?branch=master]]
+;; https://travis-ci.org/xuchunyang/gitter.el
 
 ;; [[https://badges.gitter.im/M-x-Gitter/Lobby.svg]]
 ;; https://gitter.im/M-x-Gitter/Lobby
 
-;; [Gitter]
-;; https://gitter.zendesk.com/hc/en-us/articles/200178981-What-s-Gitter-written-in-
+;; [Gitter] https://gitter.im/
 
 ;; [GNU Emacs] https://www.gnu.org/software/emacs/
 
@@ -64,23 +74,39 @@
 ;;   - Emacs 24.1 or newer
 
 
-;; 2 Setup
-;; =======
+;; 2 Install
+;; =========
+
+;; 2.1 Melpa
+;; ~~~~~~~~~
+
+;;   `gitter.el' is available from Melpa. After[setting up] Melpa as a
+;;   repository and update the local package list, you can install
+;;   `gitter.el' and its dependencies using `M-x package-install gitter'.
+
+
+;; [setting up] https://melpa.org/#/getting-started
+
+
+;; 2.2 Manually
+;; ~~~~~~~~~~~~
 
 ;;   Add gitter.el to your `load-path' and require. Something like:
 
-;;   (add-to-list 'load-path "path/to/gitter.el/")
-;;   (require 'gitter)
+;;   ,----
+;;   | (add-to-list 'load-path "path/to/gitter.el/")
+;;   | (require 'gitter)
+;;   `----
 
-;;   Alternatively, if you manage loading packages with use-package:
+;;   If you want to avoid loading `gitter.el' at Emacs startup, autoload
+;;   the `gitter' command instead of requiring.
 
-;;   (use-package gitter
-;;     :load-path "path/to/gitter.el/"
-;;     :defer t
-;;     :commands gitter)
 
-;;   Then you will need to set the authentication-token. Follow these steps
-;;   to get your token:
+;; 3 Setup
+;; =======
+
+;;   You need to set `gitter-token' to the authentication-token. Follow
+;;   these steps to get your token:
 ;;   1) Visit URL `[https://developer.gitter.im]'
 ;;   2) Click Sign in (top right)
 ;;   3) You will see your personal access token at URL
@@ -88,19 +114,21 @@
 
 ;;   When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.
 
-;;   (setq gitter-token "your-token")
+;;   ,----
+;;   | (setq gitter-token "your-token")
+;;   `----
 
 
-;; 3 Usage
+;; 4 Usage
 ;; =======
 
 ;;   Type `M-x gitter' to join a room and start chatting.
 
 
-;; 4 Customization
+;; 5 Customization
 ;; ===============
 
-;; 4.1 Emoji
+;; 5.1 Emoji
 ;; ~~~~~~~~~
 
 ;;   If you want to display Emoji, install [emojify] *or*
@@ -118,7 +146,7 @@
 ;; [company-emoji] https://github.com/dunn/company-emoji
 
 
-;; 5 Limitation
+;; 6 Limitation
 ;; ============
 
 ;;   If you are a serious Gitter user (I am not) and you compare this
@@ -134,7 +162,7 @@
 ;; [IRC access] https://irc.gitter.im/
 
 
-;; 6 To do
+;; 7 To do
 ;; =======
 
 ;;   - [ ] Markup message
@@ -518,6 +546,7 @@ learning how to make commandsnon-interactive."
     (gitter--open-room name id)))
 
 (defun gitter-send-message ()
+  "Send message in the current Gitter buffer."
   (interactive)
   (let ((proc (get-buffer-process (current-buffer))))
     (when (and proc (process-live-p proc))
