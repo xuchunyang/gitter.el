@@ -160,6 +160,7 @@
 (eval-when-compile (require 'let-alist))
 
 ;; Tell the byte compiler about autoloaded functions from packages
+(declare-function emojify-create-emojify-emojis "emojify" ())
 (declare-function emojify-display-emojis-in-region "emojify" (beg end))
 (declare-function emoji-cheat-sheet-plus--create-cache "emoji-cheat-sheet-plus" ())
 (declare-function emoji-cheat-sheet-plus--display-region "emoji-cheat-sheet-plus" (beg end))
