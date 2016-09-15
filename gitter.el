@@ -232,7 +232,7 @@ When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC."
 
 ;;; Variable
 
-(defvar gitter--debug-p nil
+(defvar gitter--debug nil
   "When non-nil, print debug information.")
 
 (defconst gitter--root-endpoint "https://api.gitter.im"
@@ -279,8 +279,8 @@ The function should not modify the current buffer.")
 ;;; Utility
 
 (defmacro gitter--debug (format-string &rest args)
-  "When `gitter--debug-p', print debug information almost like `message'."
-  `(when gitter--debug-p
+  "When `gitter--debug', print debug information almost like `message'."
+  `(when gitter--debug
      (message ,(concat "[Gitter] " format-string) ,@args)))
 
 (defun gitter--request (method resource &optional params data _noerror)
@@ -370,7 +370,7 @@ PARAMS is an alist."
     (switch-to-buffer (current-buffer))))
 
 (defun gitter--output-filter (process output)
-  (when gitter--debug-p
+  (when gitter--debug
     (with-current-buffer (get-buffer-create "*gitter log*")
       (goto-char (point-max))
       (insert output "\n\n")))
