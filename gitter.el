@@ -445,6 +445,8 @@ PARAMS is an alist."
   (cond ((require 'emojify nil t)
          (with-temp-buffer
            (insert text)
+           ;; Calculate emoji data if needed
+           (emojify-create-emojify-emojis)
            (emojify-display-emojis-in-region (point-min) (point-max))
            (buffer-string)))
         ((require 'emoji-cheat-sheet-plus nil t)
