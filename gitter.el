@@ -6,7 +6,7 @@
 ;; URL: https://github.com/xuchunyang/gitter.el
 ;; Package-Requires: ((emacs "24.1") (let-alist "1.0.4"))
 ;; Keywords: Gitter, chat, client, Internet
-;; Version: 0.0
+;; Version: 1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
