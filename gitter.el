@@ -32,13 +32,6 @@
 
 (eval-when-compile (require 'let-alist))
 
-;; Tell the byte compiler about autoloaded functions from packages
-(declare-function emojify-create-emojify-emojis "emojify" ())
-(declare-function emojify-display-emojis-in-region "emojify" (beg end))
-(declare-function emoji-cheat-sheet-plus--create-cache "emoji-cheat-sheet-plus" ())
-(declare-function emoji-cheat-sheet-plus--display-region "emoji-cheat-sheet-plus" (beg end))
-(declare-function company-emoji--create-list "company-emoji" ())
-
 
 ;;; Customization
 
@@ -106,7 +99,6 @@ URL `https://developer.gitter.im/docs/streaming-api'.")
   "JSON object of requesing user rooms API.")
 
 (defvar gitter--markup-text-functions '(string-trim
-                                        gitter--markup-emoji
                                         gitter--markup-fenced-code)
   "A list of functions to markup text. They will be called in order.
 
@@ -321,34 +313,6 @@ For reference, see URL
           (delete-region beg-outter end-outter)
           (insert (gitter--fontify-code code mode)))))
     (buffer-string)))
-
-(defun gitter--markup-emoji (text)
-  (cond ((require 'emojify nil t)
-         (with-temp-buffer
-           (insert text)
-           ;; Calculate emoji data if needed
-           (emojify-create-emojify-emojis)
-           (emojify-display-emojis-in-region (point-min) (point-max))
-           (buffer-string)))
-        ((require 'emoji-cheat-sheet-plus nil t)
-         (with-temp-buffer
-           (insert text)
-           (emoji-cheat-sheet-plus--create-cache)
-           (emoji-cheat-sheet-plus--display-region (point-min) (point-max))
-           (buffer-string)))
-        ((require 'company-emoji nil t)
-         (with-temp-buffer
-           (insert text)
-           (goto-char (point-min))
-           (let (emoji-list emoji)
-             (while (re-search-forward ":[^:]+:" nil t)
-               (unless emoji-list
-                 (setq emoji-list (company-emoji--create-list)))
-               (setq emoji (car (member (match-string 0) emoji-list)))
-               (when emoji
-                 (replace-match (get-text-property 0 :unicode emoji) t t))))
-           (buffer-string)))
-        (t text)))
 
 
 ;;; Minor mode
