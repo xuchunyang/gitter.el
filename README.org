@@ -2,7 +2,6 @@
 #+AUTHOR: Chunyang Xu
 
 [[https://melpa.org/#/gitter][https://melpa.org/packages/gitter-badge.svg]]
-[[https://travis-ci.org/xuchunyang/gitter.el][https://travis-ci.org/xuchunyang/gitter.el.svg?branch=master]]
 [[https://gitter.im/M-x-Gitter/Lobby][https://badges.gitter.im/M-x-Gitter/Lobby.svg]]
 
 A [[https://gitter.im/][Gitter]] client for [[https://www.gnu.org/software/emacs/][GNU Emacs]].
