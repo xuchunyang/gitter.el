@@ -16,7 +16,7 @@ A [[https://gitter.im/][Gitter]] client for [[https://www.gnu.org/software/emacs
 ** Melpa
 
 ~gitter.el~ is available from
-Melpa. After[[https://melpa.org/#/getting-started][setting up]] Melpa
+Melpa. After [[https://melpa.org/#/getting-started][setting up]] Melpa
 as a repository and update the local package list, you can install
 ~gitter.el~ and its dependencies using ~M-x package-install gitter~.
 
@@ -35,10 +35,10 @@ the ~gitter~ command instead of requiring.
 * Setup
 
 You need to set ~gitter-token~ to the authentication-token. Follow these steps to get your token:
-1) Visit URL `https://developer.gitter.im'
+1) Visit URL https://developer.gitter.im
 2) Click Sign in (top right)
 3) You will see your personal access token at
-   URL `https://developer.gitter.im/apps'
+   URL https://developer.gitter.im/apps
 
 When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.
 
