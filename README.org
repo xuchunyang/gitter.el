@@ -34,17 +34,18 @@ the ~gitter~ command instead of requiring.
 
 * Setup
 
-You need to set ~gitter-token~ to the authentication-token. Follow these steps to get your token:
+Follow these steps to get your gitter token:
 1) Visit URL https://developer.gitter.im
 2) Click Sign in (top right)
 3) You will see your personal access token at
    URL https://developer.gitter.im/apps
 
-When you save this variable, DON'T WRITE IT ANYWHERE PUBLIC.
+Then put this line in your =~/.authinfo= or =~/.authinfo.gpg= (Don't
+forget to replace =here-is-your-token= to yours):
 
-#+BEGIN_SRC emacs-lisp
-  (setq gitter-token "your-token")
-#+END_SRC
+#+begin_example
+machine gitter.im password here-is-your-token
+#+end_example
 
 * Usage
 
