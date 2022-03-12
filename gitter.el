@@ -411,6 +411,21 @@ machine gitter.im password here-is-your-token"))))
                           (let-alist alist
                             (cons .name .id)))
                         gitter--user-rooms))
+         (completion-extra-properties '(:annotation-function
+                                        (lambda (c)
+                                          (let* ((room (seq-find (lambda (r)
+                                                                   (rassoc c r))
+                                                                 gitter--user-rooms))
+                                                 (unread   (alist-get 'unreadItems room))
+                                                 (mentions (alist-get 'mentions room)))
+                                            (concat (when (/= unread 0)
+                                                      (propertize
+                                                       (format " unread: %s" unread)
+                                                       'face 'success))
+                                                     (when (/= mentions 0)
+                                                       (propertize
+                                                       (format " mentions %s" mentions)
+                                                       'face 'warning)))))))
          (name (completing-read "Open room: " rooms nil t))
          (id (cdr (assoc name rooms))))
     (unless (file-directory-p gitter--avatar-dir)
