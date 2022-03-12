@@ -392,9 +392,10 @@ learning how to make commandsnon-interactive."
 ;;; Commands
 
 ;;;###autoload
-(defun gitter ()
-  "Open a room."
-  (interactive)
+(defun gitter (&optional arg)
+  "Open a room.
+When ARG is non-nil, refresh `gitter--user-rooms' list."
+  (interactive "P")
   (unless (stringp gitter-token)
     (let* ((plist (car (auth-source-search :max 1 :host "gitter.im")))
            (k (plist-get plist :secret)))
@@ -403,7 +404,7 @@ learning how to make commandsnon-interactive."
         (user-error "`gitter-token' is not set.  \
 Please put this line in your ~/.authinfo or ~/.authinfo.gpg
 machine gitter.im password here-is-your-token"))))
-  (unless gitter--user-rooms
+  (when (or arg (not gitter--user-rooms))
     (setq gitter--user-rooms (gitter--request "GET" "/v1/rooms")))
   ;; FIXME Assuming room name is unique because of `completing-read'
   (let* ((rooms (mapcar (lambda (alist)
