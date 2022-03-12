@@ -100,6 +100,9 @@ URL `https://developer.gitter.im/docs/streaming-api'.")
 
 (defvar gitter--known-users nil)
 
+(defvar gitter--avatar-dir (file-name-as-directory
+                            (concat (temporary-file-directory) "gitter")))
+
 (defvar gitter--markup-text-functions '(string-trim
                                         gitter--markup-fenced-code)
   "A list of functions to markup text. They will be called in order.
@@ -174,10 +177,23 @@ PARAMS is an alist."
   (with-current-buffer (get-buffer-create (concat "#" name))
     (unless (process-live-p (get-buffer-process (current-buffer)))
       (gitter-minor-mode 1)
+      (let ((prev-messages (gitter--request "GET" (format "/v1/rooms/%s/chatMessages" id) '((limit . "100")))))
+        (dolist (response prev-messages)
+          (let-alist response
+            (insert (funcall gitter--prompt-function response))
+            (insert
+             (concat (propertize " " 'display `(space . (:width (,(line-pixel-height)))))
+                     " "
+                     (let ((text .text))
+                       (dolist (fn gitter--markup-text-functions)
+                         (setq text (funcall fn text)))
+                     text))
+           "\n"
+           "\n"))))
       ;; Setup markers
       (unless gitter--output-marker
+        (setq gitter--output-marker (point-marker))
         (insert gitter--input-prompt)
-        (setq gitter--output-marker (point-min-marker))
         (set-marker-insertion-type gitter--output-marker t)
         (setq gitter--input-marker (point-max-marker)))
       (let* ((url (concat gitter--stream-endpoint
@@ -201,7 +217,8 @@ PARAMS is an alist."
         (process-put proc 'room-id id)
         (process-put proc 'parse-buf parse-buf)
         (set-process-filter proc #'gitter--output-filter)))
-    (switch-to-buffer (current-buffer))))
+    (switch-to-buffer (current-buffer))
+    (recenter -1)))
 
 (defun gitter--output-filter (process output)
   (when gitter--debug
@@ -222,11 +239,6 @@ PARAMS is an alist."
               ;; `gitter--read-response' moves point
               (let* ((response (gitter--read-response)))
                 (let-alist response
-                  (unless (alist-get .fromUser.username gitter--known-users nil nil 'string=)
-                    (push (cons .fromUser.username
-                                (url-copy-file .fromUser.avatarUrlSmall
-                                               (concat (temporary-file-directory) .fromUser.username ".png")))
-                          gitter--known-users))
                   (with-current-buffer results-buf
                     (save-excursion
                       (save-restriction
@@ -237,18 +249,14 @@ PARAMS is an alist."
                                             .fromUser.username)))
                             ;; Delete one newline
                             (delete-char -1)
-                          (insert-image
-                           (create-image (concat (temporary-file-directory) .fromUser.username ".png")
-                                         'png
-                                         nil
-                                         :height (+ (line-pixel-height) 5)))
-                          (forward-char)
                           (insert (funcall gitter--prompt-function response)))
                         (insert
-                         (let ((text .text))
-                           (dolist (fn gitter--markup-text-functions)
-                             (setq text (funcall fn text)))
-                           text)
+                         (concat (propertize " " 'display `(space . (:width (,(line-pixel-height)))))
+                                 " "
+                                 (let ((text .text))
+                                   (dolist (fn gitter--markup-text-functions)
+                                     (setq text (funcall fn text)))
+                                   text))
                          "\n"
                          "\n")
                         (setq gitter--last-message response))))))
@@ -264,10 +272,22 @@ PARAMS is an alist."
 (defun gitter--default-prompt (response)
   "Default function to make prompt by using the JSON object MESSAGE."
   (let-alist response
-    (concat (propertize (format " %s @%s"
-                                .fromUser.displayName
-                                .fromUser.username)
-                        'face 'font-lock-comment-face)
+    (unless (member .fromUser.username (mapcar (lambda (x)
+                                                 (alist-get 'username x))
+                                               gitter--known-users))
+      (push .fromUser gitter--known-users)
+      (unless (member .fromUser.username (directory-files gitter--avatar-dir))
+        (url-copy-file .fromUser.avatarUrlSmall
+                       (concat gitter--avatar-dir .fromUser.username))))
+    (concat
+     (propertize " " 'display (create-image (concat gitter--avatar-dir .fromUser.username)
+                                            nil
+                                            nil
+                                            :height (line-pixel-height)
+                                            :ascent 100))
+     " " (propertize .fromUser.displayName 'face 'bold)
+     " @" (propertize .fromUser.username)
+     " " (propertize .sent 'face 'shadow)
             "\n")))
 
 ;; The result produced by `markdown-mode' was not satisfying
@@ -378,6 +398,8 @@ machine gitter.im password here-is-your-token"))))
                         gitter--user-rooms))
          (name (completing-read "Open room: " rooms nil t))
          (id (cdr (assoc name rooms))))
+    (unless (file-directory-p gitter--avatar-dir)
+      (make-directory gitter--avatar-dir))
     (gitter--open-room name id)))
 
 (defun gitter-send-message ()
@@ -389,8 +411,8 @@ machine gitter.im password here-is-your-token"))))
              (resource (format "/v1/rooms/%s/chatMessages" id))
              (msg (string-trim
                    (buffer-substring
-                    (marker-position gitter--input-marker)
-                    (point-max)))))
+                    (print (marker-position gitter--input-marker))
+                    (print (point-max))))))
         (if (string-empty-p msg)
             (error "Can't send empty message")
           (gitter--request "POST" resource
