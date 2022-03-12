@@ -83,6 +83,8 @@ URL `https://developer.gitter.im/docs/streaming-api'.")
 (defvar-local gitter--input-marker nil
   "The markder where input (i.e., composing a new message) begins.")
 
+(defvar-local gitter--messages nil)
+
 (defvar-local gitter--last-message nil
   "The last message has been inserted.")
 
@@ -173,11 +175,30 @@ PARAMS is an alist."
         (json-null        nil))
     (json-read)))
 
+(defun gitter--current-rooms ()
+  (let (rooms)
+    (dolist (b (buffer-list))
+      (with-current-buffer b
+        (when (eq major-mode 'gitter-mode)
+          (push (buffer-name) rooms))))
+    rooms))
+
+(defun gitter--room-id ()
+  (alist-get 'id (seq-find (lambda (r) (alist-get (buffer-name) r) nil nil #'string=)
+                           gitter--user-rooms)))
+
+(defun gitter--search ()
+  (let ((prev-messages (gitter--request "GET"
+                                        (print (format "/v1/rooms/%s/chatMessages" (gitter--room-id)))
+                                        '((limit . "500") (q . "dalanicolai")))))
+    (completing-read "Select message" (mapcar (lambda (m) (alist-get 'text m)) (print prev-messages)))))
+
 (defun gitter--open-room (name id)
-  (with-current-buffer (get-buffer-create (concat "#" name))
+  (with-current-buffer (get-buffer-create name)
     (unless (process-live-p (get-buffer-process (current-buffer)))
-      (gitter-minor-mode 1)
+      (gitter-mode)
       (let ((prev-messages (gitter--request "GET" (format "/v1/rooms/%s/chatMessages" id) '((limit . "100")))))
+        (setq gitter--messages (reverse prev-messages))
         (dolist (response prev-messages)
           (let-alist response
             (insert (funcall gitter--prompt-function response))
@@ -240,6 +261,7 @@ PARAMS is an alist."
               (let* ((response (gitter--read-response)))
                 (let-alist response
                   (with-current-buffer results-buf
+                    (push response gitter--messages)
                     (save-excursion
                       (save-restriction
                         (goto-char (marker-position gitter--output-marker))
@@ -348,16 +370,11 @@ For reference, see URL
     (buffer-string)))
 
 
-;;; Minor mode
+;;; Major mode
 
-(defvar gitter-minor-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "\C-c\C-c" #'gitter-send-message)
-    map)
-  "Keymap for `gitter-minor-mode'.")
 
 ;; FIXME Maybe it is better to use a major mode
-(define-minor-mode gitter-minor-mode
+(define-derived-mode gitter-mode fundamental-mode "Gitter"
   "Minor mode which is enabled automatically in Gitter buffers.
 With a prefix argument ARG, enable the mode if ARG is positive,
 and disable it otherwise.  If called from Lisp, enable the mode
@@ -368,12 +385,9 @@ interactive because of the cost of using `define-minor-mode'.
 Sorry to make your M-x more chaotic (yes, I think M-x is already
 chaotic), that's not my intention but I don't want to bother with
 learning how to make commandsnon-interactive."
-  :init-value nil
-  :lighter " Gitter"
-  :keymap gitter-minor-mode-map
-  :global nil
   :group 'gitter)
 
+(define-key gitter-mode-map "\C-c\C-c" #'gitter-send-message)
 
 ;;; Commands
 
