@@ -189,9 +189,24 @@ PARAMS is an alist."
 
 (defun gitter--search ()
   (let ((prev-messages (gitter--request "GET"
-                                        (print (format "/v1/rooms/%s/chatMessages" (gitter--room-id)))
+                                        (format "/v1/rooms/%s/chatMessages" (gitter--room-id))
                                         '((limit . "500") (q . "dalanicolai")))))
     (completing-read "Select message" (mapcar (lambda (m) (alist-get 'text m)) (print prev-messages)))))
+
+(defun gitter--insert-messages (messages)
+  (dolist (response messages)
+    (let-alist response
+      (insert (funcall gitter--prompt-function response))
+      (insert
+       (concat (propertize " " 'display `(space . (:width (,(line-pixel-height)))))
+               " "
+               (let ((text .text))
+                 (dolist (fn gitter--markup-text-functions)
+                   (setq text (funcall fn text)))
+                 text))
+       "\n"
+       "\n"))))
+
 
 (defun gitter--open-room (name id)
   (with-current-buffer (get-buffer-create name)
@@ -208,9 +223,19 @@ PARAMS is an alist."
                      (let ((text .text))
                        (dolist (fn gitter--markup-text-functions)
                          (setq text (funcall fn text)))
-                     text))
-           "\n"
-           "\n"))))
+                       text))
+             "\n")
+             (when .threadMessageCount
+               (insert (propertize " " 'display `(space . (:width (,(line-pixel-height))))))
+               (insert " ")
+               (insert-text-button "thread" 'action (lambda (r)
+                                                      ;; (pop-to-buffer "thread" '(display-buffer-in-side-window . ((side . right))))
+                                                      (pop-to-buffer "thread")
+                                                      (erase-buffer)
+                                                      (gitter--insert-messages
+                                                       (gitter--request "GET" (format "/v1/rooms/%s/chatMessages/%s/thread" id .id) '((limit . "100"))))))
+               (insert "\n"))
+             (insert "\n"))))
       ;; Setup markers
       (unless gitter--output-marker
         (setq gitter--output-marker (point-marker))
@@ -441,8 +466,8 @@ machine gitter.im password here-is-your-token"))))
              (resource (format "/v1/rooms/%s/chatMessages" id))
              (msg (string-trim
                    (buffer-substring
-                    (print (marker-position gitter--input-marker))
-                    (print (point-max))))))
+                    (marker-position gitter--input-marker)
+                    (point-max)))))
         (if (string-empty-p msg)
             (error "Can't send empty message")
           (gitter--request "POST" resource
