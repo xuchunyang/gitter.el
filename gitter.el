@@ -201,6 +201,11 @@ PARAMS is an alist."
     (completing-read "Select message" (mapcar (lambda (m) (alist-get 'text m)) (print prev-messages)))))
 
 (defun gitter--currently-displayed-messages ()
+  "Return list of currently displayed messages.
+The list is returned as an alist consisting of
+elements (message-start-pos . message-id). The first message is
+included even if (its header) is not fully visible. The last
+message is only included if the complete message is visible."
   (let ((last-message-idx 0)
         (message-positions gitter--message-buffer-positions))
     (while (<= (window-end) (caar message-positions))
@@ -357,14 +362,17 @@ PARAMS is an alist."
                                                gitter--known-users))
       (push .fromUser gitter--known-users)
       (unless (member .fromUser.username (directory-files gitter--avatar-dir))
-        (url-copy-file .fromUser.avatarUrlSmall
-                       (concat gitter--avatar-dir .fromUser.username))))
+        (when .fromUser.avatarUrlSmall
+          (url-copy-file .fromUser.avatarUrlSmall
+                         (concat gitter--avatar-dir .fromUser.username)))))
     (concat
-     (propertize " " 'display (create-image (concat gitter--avatar-dir .fromUser.username)
-                                            nil
-                                            nil
-                                            :height (line-pixel-height)
-                                            :ascent 100))
+     (if .fromUser.avatarUrlSmall
+         (propertize " " 'display (create-image (concat gitter--avatar-dir .fromUser.username)
+                                                nil
+                                                nil
+                                                :height (line-pixel-height)
+                                                :ascent 100))
+       (concat (propertize " " 'display `(space . (:width (,(line-pixel-height))))) " "))
      " " (propertize .fromUser.displayName 'face 'bold)
      " @" (propertize .fromUser.username)
      " " (propertize .sent 'face 'shadow)
