@@ -83,6 +83,8 @@ URL `https://developer.gitter.im/docs/streaming-api'.")
 (defvar-local gitter--input-marker nil
   "The markder where input (i.e., composing a new message) begins.")
 
+(defvar-local gitter--messages nil)
+
 (defvar-local gitter--last-message nil
   "The last message has been inserted.")
 
@@ -92,11 +94,23 @@ URL `https://developer.gitter.im/docs/streaming-api'.")
           "\n")
   "The prompt that you will compose your message after.")
 
+(defvar-local gitter--input-prompt-position 0)
+
 (defvar gitter--prompt-function #'gitter--default-prompt
   "function called with message JSON object to return a prompt for chatting logs.")
 
+(defvar gitter--user-id nil)
+
 (defvar gitter--user-rooms nil
   "JSON object of requesing user rooms API.")
+
+(defvar gitter--known-users nil)
+
+(defvar gitter--avatar-dir (file-name-as-directory
+                            (concat (temporary-file-directory) "gitter")))
+
+(defvar-local gitter--message-buffer-positions nil)
+(defvar-local gitter--message-at-top-start-pos 0)
 
 (defvar gitter--markup-text-functions '(string-trim
                                         gitter--markup-fenced-code)
@@ -168,14 +182,98 @@ PARAMS is an alist."
         (json-null        nil))
     (json-read)))
 
+(defun gitter--current-rooms ()
+  (let (rooms)
+    (dolist (b (buffer-list))
+      (with-current-buffer b
+        (when (eq major-mode 'gitter-mode)
+          (push (buffer-name) rooms))))
+    rooms))
+
+(defun gitter--room-id ()
+  (alist-get 'id (seq-find (lambda (r) (alist-get (buffer-name) r) nil nil #'string=)
+                           gitter--user-rooms)))
+
+(defun gitter--search ()
+  (let ((prev-messages (gitter--request "GET"
+                                        (format "/v1/rooms/%s/chatMessages" (gitter--room-id))
+                                        '((limit . "500") (q . "dalanicolai")))))
+    (completing-read "Select message" (mapcar (lambda (m) (alist-get 'text m)) (print prev-messages)))))
+
+(defun gitter--currently-displayed-messages ()
+  "Return list of currently displayed messages.
+The list is returned as an alist consisting of
+elements (message-start-pos . message-id). The first message is
+included even if (its header) is not fully visible. The last
+message is only included if the complete message is visible."
+  (let ((last-message-idx 0)
+        (message-positions gitter--message-buffer-positions))
+    (while (<= (window-end) (caar message-positions))
+      (setq last-message-idx (1+ last-message-idx))
+      (setq message-positions (cdr message-positions)))
+    (let ((first-message-idx last-message-idx))
+      (while (< (window-start) (caar message-positions))
+        (setq first-message-idx (1+ first-message-idx))
+        (setq message-positions (cdr message-positions)))
+      (seq-subseq gitter--message-buffer-positions last-message-idx first-message-idx))))
+
+(defun gitter--get-message-at-top-start-pos ()
+  (car (seq-find (lambda (e) (<= (car e) (window-start))) gitter--message-buffer-positions)))
+
+(defun gitter--insert-messages (messages)
+  (dolist (response messages)
+    (let-alist response
+      (insert (funcall gitter--prompt-function response))
+      (insert
+       (concat (propertize " " 'display `(space . (:width (,(line-pixel-height)))))
+               " "
+               (let ((text .text))
+                 (dolist (fn gitter--markup-text-functions)
+                   (setq text (funcall fn text)))
+                 text))
+       "\n"
+       "\n"))))
+
+(defun gitter--flag-message-read (room-id unread-items)
+  (let ((prev-messages (gitter--request "POST"
+                                        (format "/v1/user/%s/rooms/%s/unreadItems" gitter--user-id room-id)
+                                        nil
+                                        `,uritems)))))
+
 (defun gitter--open-room (name id)
-  (with-current-buffer (get-buffer-create (concat "#" name))
+  (with-current-buffer (get-buffer-create name)
     (unless (process-live-p (get-buffer-process (current-buffer)))
-      (gitter-minor-mode 1)
+      (gitter-mode)
+      (let ((prev-messages (gitter--request "GET" (format "/v1/rooms/%s/chatMessages" id) '((limit . "100")))))
+        (setq gitter--messages (reverse prev-messages))
+        (dolist (response prev-messages)
+          (let-alist response
+            (push (cons (point) .id) gitter--message-buffer-positions)
+            (insert (funcall gitter--prompt-function response))
+            (insert
+             (concat (propertize " " 'display `(space . (:width (,(line-pixel-height)))))
+                     " "
+                     (let ((text .text))
+                       (dolist (fn gitter--markup-text-functions)
+                         (setq text (funcall fn text)))
+                       text))
+             "\n")
+             (when .threadMessageCount
+               (insert (propertize " " 'display `(space . (:width (,(line-pixel-height))))))
+               (insert " ")
+               (insert-text-button "thread" 'action (lambda (r)
+                                                      ;; (pop-to-buffer "thread" '(display-buffer-in-side-window . ((side . right))))
+                                                      (pop-to-buffer "thread")
+                                                      (erase-buffer)
+                                                      (gitter--insert-messages
+                                                       (gitter--request "GET" (format "/v1/rooms/%s/chatMessages/%s/thread" id .id) '((limit . "100"))))))
+               (insert "\n"))
+             (insert "\n"))))
       ;; Setup markers
       (unless gitter--output-marker
+        (setq gitter--output-marker (point-marker))
+        (setq gitter--input-prompt-position (point))
         (insert gitter--input-prompt)
-        (setq gitter--output-marker (point-min-marker))
         (set-marker-insertion-type gitter--output-marker t)
         (setq gitter--input-marker (point-max-marker)))
       (let* ((url (concat gitter--stream-endpoint
@@ -199,7 +297,8 @@ PARAMS is an alist."
         (process-put proc 'room-id id)
         (process-put proc 'parse-buf parse-buf)
         (set-process-filter proc #'gitter--output-filter)))
-    (switch-to-buffer (current-buffer))))
+    (switch-to-buffer (current-buffer))
+    (recenter -1)))
 
 (defun gitter--output-filter (process output)
   (when gitter--debug
@@ -221,23 +320,30 @@ PARAMS is an alist."
               (let* ((response (gitter--read-response)))
                 (let-alist response
                   (with-current-buffer results-buf
+                    (push response gitter--messages)
                     (save-excursion
                       (save-restriction
                         (goto-char (marker-position gitter--output-marker))
-                        (if (and gitter--last-message
-                                 (string= .fromUser.username
-                                          (let-alist gitter--last-message
-                                            .fromUser.username)))
-                            ;; Delete one newline
-                            (delete-char -1)
-                          (insert (funcall gitter--prompt-function response)))
-                        (insert
-                         (let ((text .text))
-                           (dolist (fn gitter--markup-text-functions)
-                             (setq text (funcall fn text)))
-                           text)
-                         "\n"
-                         "\n")
+                        (let ((prev-pos (point)))
+                          (push (cons (point) .id) gitter--message-buffer-positions)
+                          (if (and gitter--last-message
+                                   (string= .fromUser.username
+                                            (let-alist gitter--last-message
+                                              .fromUser.username)))
+                              ;; Delete one newline
+                              (delete-char -1)
+                            (insert (funcall gitter--prompt-function response)))
+                          (insert
+                           (concat (propertize " " 'display `(space . (:width (,(line-pixel-height)))))
+                                   " "
+                                   (let ((text .text))
+                                     (dolist (fn gitter--markup-text-functions)
+                                       (setq text (funcall fn text)))
+                                     text))
+                           "\n"
+                           "\n")
+                          (setq gitter--input-prompt-position (+ gitter--input-prompt-position
+                                                                 (print (- (point) prev-pos)))))
                         (setq gitter--last-message response))))))
               (delete-region (point-min) (point)))
           (error
@@ -251,10 +357,25 @@ PARAMS is an alist."
 (defun gitter--default-prompt (response)
   "Default function to make prompt by using the JSON object MESSAGE."
   (let-alist response
-    (concat (propertize (format "──────────[ %s @%s"
-                                .fromUser.displayName
-                                .fromUser.username)
-                        'face 'font-lock-comment-face)
+    (unless (member .fromUser.username (mapcar (lambda (x)
+                                                 (alist-get 'username x))
+                                               gitter--known-users))
+      (push .fromUser gitter--known-users)
+      (unless (member .fromUser.username (directory-files gitter--avatar-dir))
+        (when .fromUser.avatarUrlSmall
+          (url-copy-file .fromUser.avatarUrlSmall
+                         (concat gitter--avatar-dir .fromUser.username)))))
+    (concat
+     (if .fromUser.avatarUrlSmall
+         (propertize " " 'display (create-image (concat gitter--avatar-dir .fromUser.username)
+                                                nil
+                                                nil
+                                                :height (line-pixel-height)
+                                                :ascent 100))
+       (concat (propertize " " 'display `(space . (:width (,(line-pixel-height))))) " "))
+     " " (propertize .fromUser.displayName 'face 'bold)
+     " @" (propertize .fromUser.username)
+     " " (propertize .sent 'face 'shadow)
             "\n")))
 
 ;; The result produced by `markdown-mode' was not satisfying
@@ -315,16 +436,11 @@ For reference, see URL
     (buffer-string)))
 
 
-;;; Minor mode
+;;; Major mode
 
-(defvar gitter-minor-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "\C-c\C-c" #'gitter-send-message)
-    map)
-  "Keymap for `gitter-minor-mode'.")
 
 ;; FIXME Maybe it is better to use a major mode
-(define-minor-mode gitter-minor-mode
+(define-derived-mode gitter-mode fundamental-mode "Gitter"
   "Minor mode which is enabled automatically in Gitter buffers.
 With a prefix argument ARG, enable the mode if ARG is positive,
 and disable it otherwise.  If called from Lisp, enable the mode
@@ -335,18 +451,16 @@ interactive because of the cost of using `define-minor-mode'.
 Sorry to make your M-x more chaotic (yes, I think M-x is already
 chaotic), that's not my intention but I don't want to bother with
 learning how to make commandsnon-interactive."
-  :init-value nil
-  :lighter " Gitter"
-  :keymap gitter-minor-mode-map
-  :global nil
   :group 'gitter)
 
+(define-key gitter-mode-map "\C-c\C-c" #'gitter-send-message)
 
 ;;; Commands
 
 ;;;###autoload
 (defun gitter ()
-  "Open a room."
+  "Open a room.
+When ARG is non-nil, refresh `gitter--user-rooms' list."
   (interactive)
   (unless (stringp gitter-token)
     (let* ((plist (car (auth-source-search :max 1 :host "gitter.im")))
@@ -356,15 +470,32 @@ learning how to make commandsnon-interactive."
         (user-error "`gitter-token' is not set.  \
 Please put this line in your ~/.authinfo or ~/.authinfo.gpg
 machine gitter.im password here-is-your-token"))))
-  (unless gitter--user-rooms
-    (setq gitter--user-rooms (gitter--request "GET" "/v1/rooms")))
+  (setq gitter--user-id (let-alist (car (gitter--request "GET" "/v1/user")) .id))
+  (setq gitter--user-rooms (gitter--request "GET" "/v1/rooms"))
   ;; FIXME Assuming room name is unique because of `completing-read'
   (let* ((rooms (mapcar (lambda (alist)
                           (let-alist alist
                             (cons .name .id)))
                         gitter--user-rooms))
+         (completion-extra-properties '(:annotation-function
+                                        (lambda (c)
+                                          (let* ((room (seq-find (lambda (r)
+                                                                   (rassoc c r))
+                                                                 gitter--user-rooms))
+                                                 (unread   (alist-get 'unreadItems room))
+                                                 (mentions (alist-get 'mentions room)))
+                                            (concat (when (/= unread 0)
+                                                      (propertize
+                                                       (format " unread: %s" unread)
+                                                       'face 'success))
+                                                     (when (/= mentions 0)
+                                                       (propertize
+                                                       (format " mentions %s" mentions)
+                                                       'face 'warning)))))))
          (name (completing-read "Open room: " rooms nil t))
          (id (cdr (assoc name rooms))))
+    (unless (file-directory-p gitter--avatar-dir)
+      (make-directory gitter--avatar-dir))
     (gitter--open-room name id)))
 
 (defun gitter-send-message ()
